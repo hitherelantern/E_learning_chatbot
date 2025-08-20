@@ -1,0 +1,48 @@
+milvus:
+  host: "localhost"
+  port: 19530
+  database: "Transcriptions"
+  alias: "Transcriptions"
+
+
+llm:
+  chat_model: "gemini-2.0-flash"
+  embedding_model: "models/embedding-001"
+
+
+chunking:
+  method: "semantic"   # or "recursive"
+
+  semantic:
+    overlap: 1
+    window: 5
+
+  recursive:
+    chunk_size: 500
+    overlap: 100
+
+
+collection:
+  dim: 768
+  index_params:
+    index_type: "IVF_FLAT"
+    metric_type: "COSINE"
+    params:
+      nlist: 4
+
+
+retrieval:
+  search_params:
+    metric_type: "COSINE"
+    params:
+      nprobe: 10
+  top_k: 10
+  prompt_template: "template.json"
+
+
+transcription:
+  audio_folder: "temp_audio"
+  transcriptions_folder: "temp_transcriptions"
+  model_size: "base"
+  device: "cpu"
+  interval: 15   # (unused currently, but kept for config flexibility)

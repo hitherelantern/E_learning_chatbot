@@ -1,0 +1,5 @@
+experiments
+__pycache__
+temp_audio
+temp_transcriptions
+.env
