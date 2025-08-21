@@ -8,8 +8,7 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGener
 from langchain.prompts import load_prompt
 
 # Local imports
-from ingestion import clean_transcript, semantic_chunking_with_overlap, insert_chunks, search
-
+from ingestion import *
 # ---------------- Load Config ---------------- #
 def load_config(path="config.yaml"):
     with open(path, "r") as f:
@@ -76,6 +75,8 @@ def process_audio_upload(uploaded_audio,c_name):
                 with open(temp_audio_path, "wb") as f:
                     f.write(uploaded_audio.getbuffer())
                 print(f"Saved new file at {temp_audio_path}")
+
+
         else:
             print(f"INPUT IS A STRING")
             temp_audio_path = uploaded_audio
@@ -99,7 +100,7 @@ def process_audio_upload(uploaded_audio,c_name):
         st.sidebar.info("Processing transcription...")
         processing_start_time = time.time()
         cleaned_content = clean_transcript(transcription)
-        chunks = semantic_chunking_with_overlap(cleaned_content)
+        chunks = chunk_transcript(cleaned_content)
         processing_end_time = time.time()
 
         # Insert into Milvus

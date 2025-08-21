@@ -55,7 +55,7 @@ def standardize_text(text: str):
 
 
 
-def chunk_transcript(transcript: str, config):
+def chunk_transcript(transcript: str):
 
     method = config["chunking"]["method"]
 
