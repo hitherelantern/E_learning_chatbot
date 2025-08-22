@@ -4,10 +4,18 @@ import sys,os
 from pathlib import Path
 
 def resource_path_prompts(filename: str) -> str:
-    # Go up from backend/core → backend → src2
-    base = Path(__file__).resolve().parents[2]   # -> src2
-    return str(base / "src2"/"backend" / "prompts" / filename)
 
+    # resolve() -> absolute path of the file,here, utils.py...so D:\e_learning_bot\src2\backend\utils.py
+
+    base = Path(__file__).resolve().parent  # -> backend (parent)
+    return str(base  / "prompts" / filename)
+
+
+
+
+def resource_path_2(filename: str) -> str:
+    base = Path(__file__).resolve().parents[1]  # -> src2 (parent.parent)->grandparent
+    return str(base  / filename)
 
 
 def resource_path(relative_path):
@@ -48,3 +56,5 @@ def safe_run(default_return=None, log_traceback=True):
                 } if default_return is None else default_return
         return wrapper
     return decorator
+
+

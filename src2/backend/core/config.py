@@ -3,11 +3,12 @@ import os
 import yaml
 from dotenv import load_dotenv
 from pathlib import Path
+from backend.utils import resource_path_2
 
 class Config:
     """Centralized configuration for RAG + transcription system."""
 
-    def __init__(self, yaml_path: str = "src2/config.yaml", env_path: str = "src2/.env"):
+    def __init__(self, yaml_path: str = resource_path_2("config.yaml"), env_path: str = resource_path_2(".env")):
         # Load .env
         load_dotenv(env_path)
 
@@ -31,6 +32,7 @@ class Config:
         self.collection = self.yaml_config.get("collection", {})
         self.retrieval = self.yaml_config.get("retrieval", {})
         self.transcription = self.yaml_config.get("transcription", {})
+        self.database = self.yaml_config.get("database",{})
 
 def load_config():
     global _config

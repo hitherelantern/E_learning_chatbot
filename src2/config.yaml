@@ -41,3 +41,8 @@ transcription:
   model_size: "base"
   device: "cpu"
   interval: 15
+
+database:
+  server: "mongodb://172.16.1.32:27027/"
+  db : "DATA_SCIENCE"
+  collection: "e_learning_bot_history"
