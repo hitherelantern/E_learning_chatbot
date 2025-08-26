@@ -45,4 +45,5 @@ transcription:
 database:
   server: "mongodb://172.16.1.32:27027/"
   db : "DATA_SCIENCE"
-  collection: "e_learning_bot_history"
+  chat_history: "e_learning_bot_history"
+  conversations: "e_learning_bot_conversations"

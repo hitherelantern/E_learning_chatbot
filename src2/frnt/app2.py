@@ -73,11 +73,37 @@ elif page == "Query":
         else:
             st.warning("Please fill in all fields.")
 
+
+
+# ---------------------------
+# Page: History (ChatGPT-like)
+# ---------------------------
 elif page == "History":
     st.header("🕒 Chat History")
-    chats = db.get_chats_by_session(st.session_state.session_id)
-    if chats:
-        for chat in chats:
-            st.markdown(f"**Q:** {chat['user_query']} \n **A:** {chat['bot_answer']}")
+
+    # Sidebar: Sessions & Queries
+    with st.sidebar:
+        st.subheader("💬 Previous Sessions")
+        sessions = db.get_all_sessions()  # <-- You need to implement this in MongoDBManager
+        if sessions:
+            selected_session = st.radio("Select Session", [s["_id"] for s in sessions])
+        else:
+            selected_session = None
+            st.info("No previous sessions found.")
+
+    # Main Area: Display Chat for Selected Session
+    if selected_session:
+        chats = db.get_chats_by_session(selected_session)
+        if chats:
+            st.markdown("### Conversation")
+            for chat in chats:
+                st.markdown(f"""
+                <div style="margin-bottom: 15px;">
+                    <div style="background:#e8f0fe; padding:10px; border-radius:8px; max-width:70%; margin-bottom:5px;"><b>You:</b> {chat['user_query']}</div>
+                    <div style="background:#f1f3f4; padding:10px; border-radius:8px; max-width:70%; margin-left:auto;"><b>Bot:</b> {chat['bot_answer']}</div>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.info("No chats found for this session.")
     else:
-        st.info("No history yet.")
+        st.info("Select a session from the sidebar.")

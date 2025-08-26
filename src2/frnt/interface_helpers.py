@@ -29,7 +29,11 @@ def query_collection(query: str, collection: str, k: int = 5):
         }
     )
     print("Status:", res.status_code)
-    print("Text:", res.text)
+    # print("Text:", res.text)
+    return res.json()
+
+def list_collections():
+    res = requests.get(f"{BACKEND_URL}/collections")
     return res.json()
 
 
