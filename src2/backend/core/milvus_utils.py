@@ -183,3 +183,89 @@ def ask_query(c_name: str, query: str, session_id: str, db_manager: MongoDBManag
 
 
 
+async def ask_query_stream(c_name: str, query: str, session_id: str, db_manager: MongoDBManager2):
+    if not query:
+        return
+
+    # Step 1: Enhance query
+    enhanced_query = enhance_query(query, session_id, db_manager)
+
+    # Step 2: Search documents in Milvus
+    results = search(
+        enhanced_query, 
+        top_k=cfg.retrieval["top_k"], 
+        collection_name=c_name
+    )
+    transcription_context = "\n".join([r.page_content for r in results])
+
+    # Step 3: Build prompt for LLM
+    final_prompt = prompts["context_answer_prompt"]["template"].format(
+        transcription_context=transcription_context,
+        question=query
+    )
+
+    # Step 4: Stream response tokens
+    full_answer = ""
+    async for chunk in llm_stage2.astream(final_prompt):
+        # Each chunk is an AIMessageChunk, usually with .content
+        token = getattr(chunk, "content", None)
+        if token:
+            full_answer += token  # accumulate
+            yield token
+        else:
+            yield {"debug": chunk.__dict__}  # fallback if needed
+
+    # ✅ Prepare final payload
+    final_payload = {
+        "type": "final",
+        "answer": full_answer,
+        "retrieved_docs": [
+            {
+                "text": doc.page_content,
+                "metadata": doc.metadata,
+                "score": getattr(doc, "score", None)
+            } for doc in results
+        ]
+    }
+
+    # ✅ Save into MongoDB before sending final message
+    db_manager.save_message(session_id, query, full_answer)
+
+ 
+
+async def generate_streaming_answer(
+    question: str,
+    collection: str,
+    session_id: str,
+    db_manager: MongoDBManager2
+):
+    # Step 1: Enhance query
+    enhanced_query = enhance_query(question, session_id, db_manager)
+    results = search(
+        enhanced_query,
+        top_k=cfg.retrieval["top_k"],
+        collection_name=collection
+    )
+    transcription_context = "\n".join([r.page_content for r in results])
+
+    # Step 2: Build final prompt
+    final_prompt = prompts["context_answer_prompt"]["template"].format(
+        transcription_context=transcription_context,
+        question=question
+    )
+
+    # Step 3: Streaming generator with DB save
+    async def event_stream():
+        full_answer = ""
+        async for chunk in llm_stage1.astream(final_prompt):
+            if chunk.content:
+                full_answer += chunk.content
+                yield chunk.content  # stream token to client
+
+        # Save full answer to DB once streaming is done
+        db_manager.save_message(session_id, question, full_answer)
+
+    return event_stream()  # return the generator itself
+
+
+

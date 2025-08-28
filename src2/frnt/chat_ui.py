@@ -2,7 +2,25 @@ import streamlit as st
 from datetime import datetime
 from typing import Optional
 from uuid import uuid4
-from .interface_helpers import query_collection, list_collections
+from .interface_helpers import query_collection, list_collections, stream_query,stream_response_generator
+
+
+
+
+
+def scroll_to_bottom():
+    st.markdown(
+        """
+        <script>
+        var chatContainer = window.parent.document.querySelector('.stChatMessageContainer');
+        if (chatContainer) {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        </script>
+        """,
+        unsafe_allow_html=True
+    )
+
 
 
 def _ensure_session():
@@ -38,6 +56,38 @@ def update_collection():
     st.session_state.selected_collection = st.session_state.collection_select
 
 
+
+# Decorate the chat-specific function as an experimental fragment
+@st.fragment
+def _chat_fragment(db,prompt):
+    
+     scroll_to_bottom()
+
+     if prompt and st.session_state.selected_collection:
+        # Ensure conversation exists
+        if not db.get_conversation(st.session_state.session_id):
+            db.create_conversation(st.session_state.session_id, first_message=prompt)
+
+        with st.chat_message("user"):
+            st.markdown(prompt)
+
+        with st.chat_message("assistant"):
+            # Call the generator and pass it directly to st.write_stream()
+            # response_generator = stream_response_generator(
+            #     prompt,
+            #     st.session_state.selected_collection,
+            #     st.session_state.session_id,
+            # )
+            response_generator = stream_query(
+                prompt,
+                st.session_state.selected_collection,
+                st.session_state.session_id
+            )
+            st.write_stream(response_generator)
+
+
+
+
 def chat_interface(db):
     st.title("💬 Chat with Your Data")
     _ensure_session()
@@ -52,10 +102,8 @@ def chat_interface(db):
         else:
             st.session_state.selected_collection = None
 
-    # Use the selected collection to set the initial index of the selectbox
     index = collections.index(st.session_state.selected_collection) if st.session_state.selected_collection in collections else 0
 
-    # Sidebar selectbox for collections with key and on_change callback
     st.sidebar.selectbox(
         'Choose a collection:',
         collections,
@@ -63,35 +111,27 @@ def chat_interface(db):
         key="collection_select",
         on_change=update_collection
     )
-    
-    # Chat input
-    prompt = st.chat_input("Type your question...")
 
-    if prompt and st.session_state.selected_collection:
-        # Ensure conversation exists
-        if not db.get_conversation(st.session_state.session_id):
-            db.create_conversation(st.session_state.session_id, first_message=prompt)
-
-        res = query_collection(prompt, st.session_state.selected_collection,st.session_state.session_id)
-        print(f"session id is {st.session_state.session_id,type(st.session_state.session_id)}")
-        answer = res.get("answer", "No answer returned.")
-        context = res.get("results", [])
-
-        # Save message in DB
-        db.save_message(
-            session_id=st.session_state.session_id,
-            user_query=prompt,
-            bot_answer=answer,
-            context=context
-        )
-
-    # Fetch latest history after saving
-    st.session_state.chat_history = db.get_chat_history(st.session_state.session_id)
-
-    # Display chat history
-    for chat in st.session_state.chat_history:
+    # Load and render history (but avoid re-streaming)
+    history = db.get_chat_history(st.session_state.session_id)
+    for chat in history:
         with st.chat_message("user"):
             st.markdown(chat["user_query"])
         with st.chat_message("assistant"):
             st.markdown(chat["bot_answer"])
 
+    # Chat input
+    prompt = st.chat_input("Type your question...")
+
+   # Call the chat fragment to render the chat-specific parts
+    _chat_fragment(db,prompt)
+
+        # # Save final answer to DB
+        # db.save_message(
+        #     session_id=st.session_state.session_id,
+        #     user_query=prompt,
+        #     bot_answer=final_answer,
+        #     context=[]
+        # )
+
+    
