@@ -10,14 +10,14 @@ class MongoDBManager:
         self.db = self.client[db_name]
         self.collection = self.db[collection_name]
 
-    def insert_chat(self, session_id, user_query, bot_answer, collection_name,context,top_k = cfg.retrieval["top_k"]):
+    def insert_chat(self, session_id, user_query, bot_answer, collection_name,context,top_k:int = 5):
         doc = {
             "session_id": session_id,
             "timestamp": datetime.utcnow().isoformat(),
             "collection": collection_name,
             "user_query": user_query,
             "bot_answer": bot_answer,
-            "top_k": top_k,
+            "top_k": cfg.retrieval["top_k"],
             "context": context
         }
         return self.collection.insert_one(doc)
@@ -106,11 +106,11 @@ class MongoDBManager2:
                 "user_query": user_query,
                 "bot_answer": bot_answer,
                 # "context": context or [],
-                "top_k": top_k,
+                "top_k": cfg.retrieval["top_k"],
                 "timestamp": datetime.utcnow().isoformat()
             }
 
-         
+           
             self.messages.insert_one(doc)
  
             # Update conversation timestamp
@@ -127,14 +127,14 @@ class MongoDBManager2:
         """Get all messages in a conversation sorted by time."""
         return list(self.messages.find({"session_id": session_id}).sort("timestamp", 1))
     
-    def insert_chat(self, session_id, user_query, bot_answer, collection_name,context,top_k = cfg.retrieval["top_k"]):
+    def insert_chat(self, session_id, user_query, bot_answer, collection_name,context,top_k:int = 5):
         doc = {
             "session_id": session_id,
             "timestamp": datetime.utcnow().isoformat(),
             "collection": collection_name,
             "user_query": user_query,
             "bot_answer": bot_answer,
-            "top_k": top_k,
+            "top_k": cfg.retrieval["top_k"],
             "context": context
         }
         return self.collection.insert_one(doc)

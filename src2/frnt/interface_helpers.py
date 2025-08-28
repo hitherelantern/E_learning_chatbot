@@ -3,6 +3,7 @@
 
 import requests
 
+
 BACKEND_URL = "http://localhost:8001"  # or your deployed FastAPI URL
 
 def create_collection(name: str, dim: int = 768):
@@ -19,13 +20,14 @@ def ingest_youtube(url: str, collection: str):
     res = requests.post(f"{BACKEND_URL}/ingest/youtube", params={"url": url, "collection": collection})
     return res.json()
 
-def query_collection(query: str, collection: str, k: int = 5):
+def query_collection(query: str, collection: str,session_id:str,  k: int = 5):
     res = requests.post(
         f"{BACKEND_URL}/query",
         json={
             "question": query,       # ✅ renamed
             "collection": collection,
-            "top_k": k              # ✅ renamed
+            "top_k": k,              # ✅ renamed
+            "session_id":session_id
         }
     )
     print("Status:", res.status_code)

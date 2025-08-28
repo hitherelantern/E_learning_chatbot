@@ -5,6 +5,7 @@ class QueryRequest(BaseModel):
     collection: str
     question: str
     top_k: Optional[int] = None   # allow override
+    session_id: str
 
 
 class RetrievedDocument(BaseModel):

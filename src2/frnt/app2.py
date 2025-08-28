@@ -54,7 +54,7 @@ elif page == "Query":
 
     if st.button("Search"):
         if collection and query_text:
-            res = query_collection(query_text, collection, top_k)
+            res = query_collection(query_text, collection)
             answer = res.get("answer", "No answer returned.")
             context = res.get("results", [])
 

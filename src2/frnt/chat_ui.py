@@ -72,7 +72,8 @@ def chat_interface(db):
         if not db.get_conversation(st.session_state.session_id):
             db.create_conversation(st.session_state.session_id, first_message=prompt)
 
-        res = query_collection(prompt, st.session_state.selected_collection)
+        res = query_collection(prompt, st.session_state.selected_collection,st.session_state.session_id)
+        print(f"session id is {st.session_state.session_id,type(st.session_state.session_id)}")
         answer = res.get("answer", "No answer returned.")
         context = res.get("results", [])
 
@@ -81,7 +82,6 @@ def chat_interface(db):
             session_id=st.session_state.session_id,
             user_query=prompt,
             bot_answer=answer,
-            top_k=5,
             context=context
         )
 

@@ -1,7 +1,10 @@
+import json
 from pathlib import Path
 import sys,os
 
 from pathlib import Path
+
+
 
 def resource_path_prompts(filename: str) -> str:
 
@@ -56,5 +59,12 @@ def safe_run(default_return=None, log_traceback=True):
                 } if default_return is None else default_return
         return wrapper
     return decorator
+
+
+def load_file(file_path: str) -> dict:
+    with open(file_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+    
+
 
 

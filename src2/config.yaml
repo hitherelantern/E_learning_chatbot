@@ -7,8 +7,14 @@ milvus:
   alias: "Transcriptions"
 
 llm:
-  chat_model: "gemini-2.0-flash"
-  embedding_model: "models/embedding-001"
+  chat_model:
+    name: "gemini-2.0-flash"
+    temperature: 0.7
+  embedding_model: 
+    name: "models/embedding-001"
+    batch_size: 2
+    delay: 30
+  
 
 chunking:
   method: "semantic"

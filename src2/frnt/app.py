@@ -58,7 +58,7 @@ elif page == "Query":
 
     if st.button("Search"):
         if collection and query_text:
-            res = query_collection(query_text, collection, top_k)
+            res = query_collection(query_text, collection)
 
             # ✅ Just show the answer
             st.subheader("💡 Answer")

@@ -2,9 +2,9 @@ import streamlit as st
 from frnt.interface_helpers import create_collection, ingest_audio, ingest_youtube, query_collection
 from backend.db.db_manager import MongoDBManager2
 import uuid
+from backend.api.query import db_manager_instance as db
 
-# Initialize MongoDB Manager
-db = MongoDBManager2()
+
 
 # Generate session ID for user
 if "session_id" not in st.session_state:
@@ -45,6 +45,8 @@ elif page == "Ingest":
         res = ingest_youtube(youtube_url, collection)
         if res["status"] == "ok":
             st.success(f"Inserted {res['chunks']} chunks successfully into collection {collection}!")
+        else:
+            st.write(f"some error occured!")
 
 elif page == "Chat":
     from frnt.chat_ui import chat_interface
