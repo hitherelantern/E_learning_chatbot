@@ -11,23 +11,28 @@ from langchain_community.vectorstores import Milvus
 from langchain.prompts import load_prompt
 from backend.utils import load_file, resource_path_prompts, safe_run
 from backend.db.db_manager import MongoDBManager2
-from langchain.callbacks.base import AsyncCallbackHandler
+from backend.core.memory import enhance_query
+
 
 
 
 
 cfg = load_config()
+
 emb_model = cfg.llm["embedding_model"]
 
-embedding_model = GoogleGenerativeAIEmbeddings(
-    model=emb_model["name"]
-)
-model = cfg.llm["chat_model"]
+llm = cfg.llm["chat_model"]["name"]
+temperature = cfg.llm["chat_model"]["temperature"]
 
-# llm = ChatGoogleGenerativeAI(model=model["name"])
-llm_stage1 = ChatGoogleGenerativeAI(model=model["name"], temperature=model["temperature"])
-llm_stage2 = ChatGoogleGenerativeAI(model=model["name"], 
-                             temperature=model["temperature"],
+
+
+# Embedding model
+embedding_model = GoogleGenerativeAIEmbeddings(model=emb_model["name"])
+
+# llm 
+llm_stage1 = ChatGoogleGenerativeAI(model=llm, temperature=temperature)
+llm_stage2 = ChatGoogleGenerativeAI(model=llm, 
+                             temperature=temperature,
                              callbacks=[StreamingStdOutCallbackHandler()]  # prints tokens as they stream
                                 )
 
@@ -127,31 +132,6 @@ def search(query: str, top_k:int, collection_name: str):
 
 
 
-def enhance_query(query: str, session_id: str, db_manager: MongoDBManager2) -> str:
-    """Enhance user query using past conversation from MongoDB."""
-    # Get full chat history from Mongo
-    messages = db_manager.get_chat_history(session_id)
-    
-    # Prepare last few exchanges for context
-    history_text = "\n".join([
-        f"User: {msg.get('user_query', '')}\nBot: {msg.get('bot_answer', '')}"
-        for msg in messages[-5:]
-    ])
-    
-    # Load enhancement prompt from JSON
-    enhancement_template = prompts["enhancement_prompt"]["template"]
-    enhancement_prompt = enhancement_template.format(
-        chat_history=history_text,
-        query=query
-    )
-    
-    # Call LLM to rewrite the query
-    enhanced_query = llm_stage1.invoke(enhancement_prompt).content.strip()
-    return enhanced_query
-
-
-
-
 @safe_run()
 def ask_query(c_name: str, query: str, session_id: str, db_manager: MongoDBManager2):
 
@@ -241,6 +221,7 @@ async def generate_streaming_answer(
 ):
     # Step 1: Enhance query
     enhanced_query = enhance_query(question, session_id, db_manager)
+    print(f"enhanced query:{enhanced_query}")
     results = search(
         enhanced_query,
         top_k=cfg.retrieval["top_k"],

@@ -5,9 +5,12 @@ import json
 import requests
 import websocket
 import streamlit as st
+from backend.core.config import load_config
+
+cfg = load_config()
 
 
-BACKEND_URL = "http://localhost:8001"  # or your deployed FastAPI URL
+BACKEND_URL = cfg.backend["server"]  # or your deployed FastAPI URL
 
 def create_collection(name: str, dim: int = 768):
     res = requests.post(f"{BACKEND_URL}/collections/{name}", params={"dim": dim})

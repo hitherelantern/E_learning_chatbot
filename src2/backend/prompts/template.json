@@ -12,5 +12,14 @@
     "template_format": "f-string",
     "validate_template": false,
     "_type": "prompt"
-  }
+  },
+  "summarize_prompt": {
+  "template": "You are a helpful assistant that summarizes conversations.\n\nSummarize the following conversation into JSON.\n\n{format_instructions}\n\nConversation:\n{chat_history}",
+  "input_variables": ["chat_history", "format_instructions"],
+  "template_format": "f-string",
+  "validate_template": false,
+  "_type": "prompt"
+}
+
+
 }

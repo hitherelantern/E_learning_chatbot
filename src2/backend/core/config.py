@@ -23,7 +23,7 @@ class Config:
 
         # === ENV (secrets only) ===
         self.GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY", "")
-        self.GROK_API_KEY = os.getenv("GROQ_API_KEY", "")
+        self.GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 
         # === YAML ===
         self.milvus = self.yaml_config.get("milvus", {})
@@ -33,6 +33,7 @@ class Config:
         self.retrieval = self.yaml_config.get("retrieval", {})
         self.transcription = self.yaml_config.get("transcription", {})
         self.database = self.yaml_config.get("database",{})
+        self.backend = self.yaml_config.get("backend",{})
 
 def load_config():
     global _config

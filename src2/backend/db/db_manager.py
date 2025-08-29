@@ -1,6 +1,8 @@
+from zoneinfo import ZoneInfo
 import pymongo
-from datetime import datetime
+from datetime import datetime, timezone
 from backend.core.config import load_config
+
 
 cfg = load_config()
 
@@ -43,6 +45,7 @@ class MongoDBManager2:
         self.db = self.client[db_name]
         self.conversations = self.db[cfg.database["conversations"]]
         self.messages = self.db[cfg.database["chat_history"]]
+        self.session_summary = self.db[cfg.database["session_summary"]]
 
     # ---------------------------
     # Conversation Methods
@@ -115,7 +118,6 @@ class MongoDBManager2:
  
             # Update conversation timestamp
             self.update_conversation_timestamp(session_id)
-            return True
         
 
         except Exception as e:
@@ -127,24 +129,37 @@ class MongoDBManager2:
         """Get all messages in a conversation sorted by time."""
         return list(self.messages.find({"session_id": session_id}).sort("timestamp", 1))
     
-    def insert_chat(self, session_id, user_query, bot_answer, collection_name,context,top_k:int = 5):
-        doc = {
-            "session_id": session_id,
-            "timestamp": datetime.utcnow().isoformat(),
-            "collection": collection_name,
-            "user_query": user_query,
-            "bot_answer": bot_answer,
-            "top_k": cfg.retrieval["top_k"],
-            "context": context
-        }
-        return self.collection.insert_one(doc)
+
+    def save_summary(self,session_id:str,user_id:str,summary:dict) -> None:
+
+        try:
+            doc = {
+                "user_id":user_id,
+                "session_id":session_id,
+                "summary" : summary.get('summary',""),
+                "topics": summary.get('topics',[]),
+                "updated_at":datetime.now().astimezone().isoformat()
+            }
+            self.session_summary.insert_one(doc)
+
+
+        except Exception as e:
+            print(f"Error saving summary : {e}")
     
 
-    
+    def get_summary(self, session_id: str) -> List[Dict]:
+        """Get summary of a particular session sorted by time."""
+        return list(self.messages.find({"session_id": session_id}).sort("updated_at", 1))
 
+    def get_all_session_ids(self) -> List[str]:
+        """Gets all session ids from the corresponding collection"""
+        return self.session_summary.distinct("session_id")
     
+    def get_all_summaries(self) -> List[dict]:
+        """Return all records in session_summary collection."""
+        return list(self.session_summary.find({}).sort("updated_at", 1))
 
-    
+
 
     # def generate_name_from_message(self, message: str) -> str:
     #     # Call an LLM here for better summarization

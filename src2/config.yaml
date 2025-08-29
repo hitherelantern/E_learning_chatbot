@@ -53,3 +53,9 @@ database:
   db : "DATA_SCIENCE"
   chat_history: "e_learning_bot_history"
   conversations: "e_learning_bot_conversations"
+  session_summary: "e_learning_bot_summaries"
+
+
+
+backend:
+  server: "http://localhost:8001" 

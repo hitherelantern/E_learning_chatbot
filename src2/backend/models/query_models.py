@@ -18,3 +18,10 @@ class QueryResponse(BaseModel):
     question: str
     answer: Optional[str] = None   # ✅ new
     results: List[RetrievedDocument]
+
+
+
+# Define schema with Pydantic (for session wise summary)
+class ConversationSummary(BaseModel):
+    summary: str          # 2–3 sentence summary
+    topics: List[str]     # 2–5 keywords
