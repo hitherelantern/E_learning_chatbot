@@ -1,0 +1,147 @@
+import os
+from langchain.prompts import ChatPromptTemplate
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain.output_parsers import PydanticOutputParser
+
+from backend.db.db_manager import MongoDBManager2
+from backend.core.config import load_config
+from backend.utils import load_file, resource_path_prompts
+from backend.models.query_models import ConversationSummary
+
+
+class ConversationManager:
+    """
+    Component for query enhancement and session summarization.
+    Encapsulates logic around:
+    - Enhancing queries using recent history / session summaries / cross-session summaries
+    - Summarizing sessions
+    """
+
+    def __init__(self, db_manager: MongoDBManager2):
+        cfg = load_config()
+        self.db_manager = db_manager
+
+        # LLM setup
+        llm_model = cfg.llm["chat_model"]["name"]
+        temperature = cfg.llm["chat_model"]["temperature"]
+        self.llm = ChatGoogleGenerativeAI(model=llm_model, temperature=temperature)
+
+        # Prompts
+        self.prompts = load_file(resource_path_prompts(cfg.retrieval["prompt_template"]))
+        self.summarize_template = self.prompts["summarize_prompt"]["template"]
+
+    # ------------------------------
+    # Query Enhancement Methods
+    # ------------------------------
+    def enhance_query(self, query: str, session_id: str) -> str:
+        """Enhance user query using recent history only."""
+        history_text = self._get_recent_history(session_id)
+
+        enhancement_prompt = self.prompts["enhancement_prompt"]["template"].format(
+            chat_history=history_text, query=query
+        )
+
+        return self.llm.invoke(enhancement_prompt).content.strip()
+
+
+
+    def enhance_query_wss(self, query: str, session_id: str) -> str:
+        """Enhance query using recent history + within-session summary."""
+        history_text = self._get_recent_history(session_id)
+
+        # session summary (if exists)
+        summary = self.db_manager.get_summary(session_id)
+        session_summary = "\n".join(
+            [f"Summary: {s.get('summary', '')}\nkeywords: {s.get('topics', '')}" for s in summary]
+        )
+
+        enhancement_prompt = self.prompts["enhancement_prompt_wss"]["template"].format(
+            chat_history=history_text, summary=session_summary, query=query
+        )
+
+        return self.llm.invoke(enhancement_prompt).content.strip()
+    
+
+
+
+    def enhance_query_ass(self, query: str, session_id: str) -> str:
+        """Enhance query using recent history + across-session summaries."""
+        history_text = self._get_recent_history(session_id)
+
+        session_summaries = self.db_manager.get_all_summaries()
+        total_summary = "\n".join(
+            [f"Summary: {s.get('summary', '')}\nkeywords: {s.get('topics', '')}" for s in session_summaries]
+        )
+
+        enhancement_prompt = self.prompts["enhancement_prompt_ass"]["template"].format(
+            chat_history=history_text, summary=total_summary, query=query
+        )
+
+        return self.llm.invoke(enhancement_prompt).content.strip()
+
+
+
+
+    # ------------------------------
+    # Summarization
+    # ------------------------------
+    def summarize_session(self, user_id: str = None):
+        """Summarize all chat sessions in MongoDB."""
+        parser = PydanticOutputParser(pydantic_object=ConversationSummary)
+
+        if user_id is None:
+            user_id = os.getlogin()
+
+        format_instructions = parser.get_format_instructions()
+        conversations = self.db_manager.get_all_conversations()
+
+        for conv in conversations:
+            session_id = conv["session_id"]
+            history_text = self._get_recent_history(session_id)
+
+            final_prompt = self.summarize_template.format(
+                chat_history=history_text, format_instructions=format_instructions
+            )
+            raw_summary = self.llm.invoke(final_prompt)
+
+            try:
+                parsed_summary = parser.parse(raw_summary.content)
+            except Exception as e:
+                print(f"❌ Failed to parse summary for {session_id}: {e}")
+                continue
+
+            self.db_manager.save_summary(
+                session_id=session_id,
+                user_id=user_id,
+                summary=parsed_summary.model_dump(),
+            )
+
+            print(f"✅ Finished summarizing {session_id}")
+            print(f"   Summary: {parsed_summary.summary}")
+            print(f"   Topics: {parsed_summary.topics}")
+
+
+
+
+    def maybe_summarize_session(self, session_id: str):
+        """Hook to decide when to summarize (rolling or end-of-session)."""
+        messages = self.db_manager.get_chat_history(session_id)
+
+        if len(messages) > 50:  # rolling summarization
+            summary = self.llm.invoke(self.summarize_template.format(chat_history="\n".join(messages[:40])))
+            self.db_manager.append_summary(session_id, summary.content)
+            self.db_manager.trim_messages(session_id, keep_last=10)
+
+
+
+
+
+    # ------------------------------
+    # Helpers
+    # ------------------------------
+    def _get_recent_history(self, session_id: str, n: int = 5) -> str:
+        """Fetch last N user-bot exchanges as text."""
+        messages = self.db_manager.get_chat_history(session_id)
+        return "\n".join(
+            [f"User: {msg.get('user_query', '')}\nBot: {msg.get('bot_answer', '')}" for msg in messages[-n:]]
+        )

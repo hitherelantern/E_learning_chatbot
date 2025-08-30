@@ -140,10 +140,16 @@ def enhance_query_wss(query: str, session_id: str, db_manager: MongoDBManager2) 
     ])
     
     # --- Get summary (if exists) ---
-    session_summary = db_manager.get_summary(session_id)[0]['summary'] 
+    summary = db_manager.get_summary(session_id)
+
+
+    session_summary = "\n".join([
+                f"Summary: {s.get('summary', '')}\nkeywords: {s.get('topics', '')}"
+                for s in summary
+            ])
     
     # --- Build enhancement prompt ---
-    enhancement_template = prompts["enhancement_prompt"]["template"]
+    enhancement_template = prompts["enhancement_prompt_wss"]["template"]
     enhancement_prompt = enhancement_template.format(
         chat_history=history_text,
         summary=session_summary,
@@ -160,7 +166,7 @@ def enhance_query_wss(query: str, session_id: str, db_manager: MongoDBManager2) 
 
 def enhance_query_ass(query: str, session_id: str, db_manager: MongoDBManager2) -> str:
 
-    """Enhance user query using both recent history and ass (Across Session Summary)"""
+    """Enhance user query using both recent history and ass (Across Sessions Summary)"""
     
     # --- Get last few turns ---
     messages = db_manager.get_chat_history(session_id)
@@ -180,7 +186,7 @@ def enhance_query_ass(query: str, session_id: str, db_manager: MongoDBManager2) 
                 
     
     # --- Build enhancement prompt ---
-    enhancement_template = prompts["enhancement_prompt"]["template"]
+    enhancement_template = prompts["enhancement_prompt_ass"]["template"]
     enhancement_prompt = enhancement_template.format(
         chat_history=history_text,
         summary=total_summary,
